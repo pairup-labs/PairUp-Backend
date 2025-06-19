@@ -12,6 +12,19 @@ app.use(
         allowedHeaders: ["Content-Type", "Authorization"], // add here all headers your
     })
 );
+app.use((req, res, next) => {
+    // Replace with the actual origin of your frontend
+    res.setHeader(
+        "Access-Control-Allow-Origin",
+        "https://pairup-silk.vercel.app"
+    );
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE"); // Add allowed methods
+    res.setHeader(
+        "Access-Control-Allow-Headers",
+        "Content-Type, Authorization"
+    ); // Add allowed headers
+    next();
+});
 
 app.use(
     express.json({
