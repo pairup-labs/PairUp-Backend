@@ -6,7 +6,7 @@ const app = express();
 
 app.use(
     cors({
-        origin: process.env.CORS_ORIGIN,
+        origin: process.env.CORS_ORIGIN_PRODUCTION || process.env.CORS_ORIGIN,
         credentials: true, //access-control-allow-credentials
         methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"], // add here all http methods you use
         allowedHeaders: ["Content-Type", "Authorization"], // add here all headers your
