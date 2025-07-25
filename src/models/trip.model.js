@@ -60,6 +60,10 @@ const tripSchema = new mongoose.Schema(
                 required: true,
             },
         },
+        expired: {
+            type: Boolean,
+            default: false,
+        },
     },
     { timestamps: true }
 );

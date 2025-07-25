@@ -138,6 +138,11 @@ const postTrip = asyncHandler(async (req, res) => {
 
 const getAllTrip = asyncHandler(async (req, res) => {
     try {
+        // Expire trips whose startDate is in the past
+        await Trip.updateMany(
+            { startDate: { $lt: new Date() }, expired: false },
+            { $set: { expired: true } }
+        );
         // Expect the user's latitude and longitude in the query parameters
         const { lat, lng, maxDistance } = req.query;
 
@@ -151,6 +156,9 @@ const getAllTrip = asyncHandler(async (req, res) => {
 
         // Use the $geoNear aggregation stage to find trips ordered by distance
         const trips = await Trip.aggregate([
+            {
+                $match: { expired: false },
+            },
             {
                 $geoNear: {
                     near: {
@@ -425,6 +433,11 @@ const joinTrip = asyncHandler(async (req, res) => {
 
 const getNearbyTrips = asyncHandler(async (req, res) => {
     try {
+        // Expire trips whose startDate is in the past
+        await Trip.updateMany(
+            { startDate: { $lt: new Date() }, expired: false },
+            { $set: { expired: true } }
+        );
         // Expect lat, lng, and maxDistance in query parameters
         const { lat, lng, maxDistance } = req.query;
         if (!lat || !lng) {
@@ -434,6 +447,9 @@ const getNearbyTrips = asyncHandler(async (req, res) => {
         const distanceLimit = maxDistance ? parseInt(maxDistance) : 100000;
 
         const trips = await Trip.aggregate([
+            {
+                $match: { expired: false },
+            },
             {
                 $geoNear: {
                     near: {
