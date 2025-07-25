@@ -12,8 +12,8 @@ const tripSchema = new mongoose.Schema(
             required: true,
         },
         categories: {
-            type: String,
-            //required: true,
+            type: [String],
+            default: [],
         },
         startDate: {
             type: Date,

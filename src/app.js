@@ -4,9 +4,13 @@ import cookieParser from "cookie-parser";
 
 const app = express();
 
+const allowedOrigin = process.env.CORS_ORIGIN_PRODUCTION || process.env.CORS_ORIGIN;
+if (!allowedOrigin) {
+    throw new Error("CORS origin is not set. Please set CORS_ORIGIN_PRODUCTION or CORS_ORIGIN in your environment variables.");
+}
 app.use(
     cors({
-        origin: process.env.CORS_ORIGIN_PRODUCTION || process.env.CORS_ORIGIN,
+        origin: allowedOrigin,
         credentials: true, //access-control-allow-credentials
         methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"], // add here all http methods you use
         allowedHeaders: ["Content-Type", "Authorization"], // add here all headers your
