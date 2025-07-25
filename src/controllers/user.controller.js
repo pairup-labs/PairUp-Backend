@@ -655,25 +655,6 @@ const getTripHistory = asyncHandler(async (req, res) => {
                 localField: "_id",
                 foreignField: "organizer",
                 as: "tripHistory",
-                // pipeline: [
-                //     {
-                //         $project: {
-                //             destination: 1,
-                //             participants: 1,
-                //             coverImage: 1,
-                //             startDate: 1,
-                //             endDate: 1,
-                //             "organizer._id": 1,
-                //         },
-                //     },
-                //     {
-                //         $addFields: {
-                //             organizer: {
-                //                 $first: "$tripHistory",
-                //             },
-                //         },
-                //     },
-                // ],
                 pipeline: [
                     {
                         $lookup: {
@@ -700,8 +681,6 @@ const getTripHistory = asyncHandler(async (req, res) => {
                             },
                         },
                     },
-                ],
-                pipeline: [
                     {
                         $lookup: {
                             from: "users",

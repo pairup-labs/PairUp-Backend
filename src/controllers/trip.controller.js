@@ -65,17 +65,30 @@ const postTrip = asyncHandler(async (req, res) => {
 
         //console.log(`coverImage: ${coverImage} coverImage.url: ${coverImage.url}`);
 
+        let parsedItinerary = [];
+        try {
+            parsedItinerary = itinerary ? JSON.parse(itinerary) : [];
+        } catch (e) {
+            throw new ApiError(400, "Invalid itinerary format");
+        }
+        // Ensure categories is always an array
+        const categoriesArray = Array.isArray(categories)
+            ? categories
+            : typeof categories === "string" && categories.length > 0
+            ? categories.split(",").map((c) => c.trim())
+            : [];
+
         // ✅ Create new trip
         const trip = await Trip.create({
             organizer: req.user._id,
             destination,
-            categories,
+            categories: categoriesArray,
             startDate,
             endDate,
             numberOfPeople,
             budget,
             description,
-            itinerary: JSON.parse(itinerary), // Convert itinerary JSON string to object
+            itinerary: parsedItinerary,
             coverImage:
                 coverImage?.url ||
                 "https://res.cloudinary.com/pairup-connect/image/upload/f_auto,q_auto/No_image_available_afsl0y",
