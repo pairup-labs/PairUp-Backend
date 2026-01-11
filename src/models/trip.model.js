@@ -23,6 +23,10 @@ const tripSchema = new mongoose.Schema(
             type: Date,
             required: true,
         },
+        expired: {
+            type: Boolean,
+            default: false,
+        },
         numberOfPeople: {
             type: Number,
             required: true,

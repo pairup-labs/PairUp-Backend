@@ -10,6 +10,8 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import fs from "fs";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
+import { sendEmail } from "../utils/mailer.js";
+import crypto from "crypto";
 
 const generateAccessTokenAndRefreshToken = async (userId) => {
     try {
@@ -45,6 +47,89 @@ const generateAccessTokenAndRefreshToken = async (userId) => {
     }
 };
 
+// verify email using otp
+// export const verifyEmail = asyncHandler(async (req, res) => {
+//     const { email, otp } = req.body;
+
+//     if (!email || !otp) {
+//         throw new ApiError(400, "Email and OTP are required.");
+//     }
+
+//     const user = await User.findOne({
+//         email,
+//         verificationToken: otp,
+//         verificationTokenExpiry: { $gt: Date.now() },
+//     });
+
+//     if (!user) {
+//         throw new ApiError(400, "Invalid or expired OTP.");
+//     }
+
+//     user.isVerified = true;
+//     user.verificationToken = undefined;
+//     user.verificationTokenExpiry = undefined;
+//     await user.save({ validateBeforeSave: false });
+
+//     return res
+//         .status(200)
+//         .json(
+//             new ApiResponse(
+//                 200,
+//                 {},
+//                 "Email verified successfully. You can now log in."
+//             )
+//         );
+// });
+
+// verify email using token
+export const verifyEmail = asyncHandler(async (req, res) => {
+    const { token } = req.params;
+    console.log("Received token for verification:", token);
+
+    if (!token) {
+        throw new ApiError(400, "Verification token is missing.");
+    }
+
+    // Try to find a user with the token, even if expired, for debugging
+    const user = await User.findOne({
+        verificationToken: token,
+    });
+
+    // --- DEBUGGING BLOCK ---
+    if (!user) {
+        console.log("DEBUG: No user found with this token.");
+        throw new ApiError(400, "Invalid or expired verification token.");
+    }
+
+    if (user.verificationTokenExpiry < Date.now()) {
+        console.log("DEBUG: Token found, but it has expired.");
+        console.log("Expiry Date:", user.verificationTokenExpiry);
+        console.log("Current Date:", new Date(Date.now()));
+        throw new ApiError(400, "Invalid or expired verification token.");
+    }
+
+    if (user.isVerified) {
+        throw new ApiError(400, "Email already verified.");
+    }
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationTokenExpiry = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    // You can redirect the user to a success page on your frontend
+    // For an API, sending a success message is also fine.
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                {},
+                "Email verified successfully. You can now log in."
+            )
+        );
+});
+
 const registerUser = asyncHandler(async (req, res) => {
     const { fullName, email, phone, username, password } = req.body;
     console.log(
@@ -63,7 +148,11 @@ const registerUser = asyncHandler(async (req, res) => {
 
     // check if user already exists in the database: username, email
     const existedUser = await User.findOne({
-        $or: [{ username }, { email }, { phone }],
+        $or: [
+            { username, isVerified: true },
+            { email, isVerified: true },
+            { phone, isVerified: true },
+        ],
     });
 
     console.log("existedUser: ", existedUser);
@@ -82,6 +171,17 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new ApiError(
             401,
             "User with username, phone or email already exist"
+        );
+    }
+
+    const unverifiedUser = await User.findOne({ email, isVerified: false });
+
+    if (unverifiedUser) {
+        // If an unverified user exists, you can either resend the OTP
+        // or ask them to verify. For simplicity, we'll prevent re-registration for now.
+        throw new ApiError(
+            400,
+            "An account with this email is already pending verification."
         );
     }
 
@@ -105,51 +205,88 @@ const registerUser = asyncHandler(async (req, res) => {
     //     throw new ApiError(401, "Avatar is required to upload on cloudinary");
     // }
 
-    try {
-        // create user object - create user in the database
-        const user = await User.create({
-            // create is methode and it takes object
-            fullName,
-            avatar: avatar?.url || "",
-            // we not checking avatar is upload successfully or not that why if (avatar?) is present then take url. if not, then take empty string.
-            email,
-            phone,
-            password,
-            username: username.toLowerCase(),
-        });
-        if (!user) {
-            console.error("User not created");
-            throw new ApiError(
-                401,
-                "Something went wrong before registering user"
-            );
-        }
+    // otp generation
+    // Generate a unique verification token instead of an OTP
+    const verificationToken = crypto.randomBytes(20).toString("hex");
+    const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // Token valid for 24 hours
 
-        // remove password and refresh token field from response
-        const createdUser = await User.findById(user._id).select(
-            "-password -refreshToken" // select methode me jo field nhi chahiye response me usko - sign laga kr likh do.
+    // create user object - create user in the database
+    const user = await User.create({
+        fullName,
+        email,
+        phone,
+        username: username.toLowerCase(),
+        password,
+        avatar: avatar?.url || "",
+        verificationToken: verificationToken, // Store the new token
+        verificationTokenExpiry: verificationTokenExpiry,
+        isVerified: false,
+        loginType: "EMAIL_PASSWORD",
+    });
+
+    if (!user) {
+        console.error("User not created");
+        throw new ApiError(401, "Something went wrong before registering user");
+    }
+
+    // remove password and refresh token field from response
+    const createdUser = await User.findById(user._id).select(
+        "-password -refreshToken" // select methode me jo field nhi chahiye response me usko - sign laga kr likh do.
+    );
+    // now, checking user created or not
+    if (!createdUser) {
+        throw new ApiError(
+            401,
+            "Something went wrong after registering the user"
         );
-        // now, checking user created or not
-        if (!createdUser) {
-            throw new ApiError(
-                401,
-                "Something went wrong after registering the user"
-            );
-        }
+    }
 
-        // returning res to frontend
+    try {
+        console.log("sending verification email");
+        // await sendEmail({
+        //     fromAddress: "noreply@pairup.online", // Specify the sender
+        //     fromName: "PairUp Verification", // Specify the sender's name
+        //     email: user.email,
+        //     subject: "Verify Your Email Address",
+        //     html: `<p>Your verification code is: <strong>${otp}</strong>. It will expire in 10 minutes.</p>`,
+        // });
+
+        const verificationUrl = `${process.env.CORS_ORIGIN}/verify-email/${verificationToken}`;
+
+        console.log("sending verification email");
+        await sendEmail({
+            fromAddress: "noreply@pairup.online",
+            fromName: "PairUp Verification",
+            email: user.email,
+            subject: "Verify Your Email Address",
+            html: `
+            <p>Hello ${user.fullName},</p>
+            <p>Thank you for registering. Please click the link below to verify your email address:</p>
+            <p><a href="${verificationUrl}" style="color: blue; text-decoration: underline;">Verify Your Email</a></p>
+            <p>If you cannot click the link, please copy and paste this URL into your browser:</p>
+            <p>${verificationUrl}</p>
+            <p>This link will expire in 24 hours. </p>
+        `,
+        });
+        console.log("Email sent successfully");
+
         return res
             .status(201)
             .json(
                 new ApiResponse(
                     201,
-                    createdUser,
-                    "User registered successfully"
+                    { userId: user._id },
+                    "Verification link sent to your email. Please verify."
                 )
             );
     } catch (error) {
-        console.error("Error in registerUser:", error);
-        throw new ApiError(401, "Something went wrong while registering user");
+        // If email sending fails, you might want to delete the user to allow them to try again
+        await User.findByIdAndDelete(user._id);
+        console.error("Error sending verification email:", error);
+        throw new ApiError(
+            500,
+            "Failed to send verification email. Please try again."
+        );
     }
 });
 
@@ -159,7 +296,7 @@ const loginUser = asyncHandler(async (req, res) => {
     const { email, username, password } = req.body;
 
     console.log(
-        `email, username, password: ${email}, ${username}, ${password}`
+        `email: ${email}, username: ${username}, password:  ${password}`
     );
     // check user is sending  username or email
     if (!(username || email)) {
@@ -171,11 +308,25 @@ const loginUser = asyncHandler(async (req, res) => {
         $or: [{ email }, { username }], //$or is m_db's operators. which is finding based on email or username is present in db, or not
     });
 
-    //console.log(user);
+    console.log(user);
 
     //if user is not exist in db then throwing err
     if (!user) {
         throw new ApiError(401, "User does not register");
+    }
+
+    if (user.loginType === "GOOGLE") {
+        throw new ApiError(
+            400,
+            "This account was created using Google Sign-In. Please log in with Google."
+        );
+    }
+
+    console.log("user.isVerified: ", user.isVerified);
+
+    //if user is not verified then throwing err
+    if (user.isVerified === false) {
+        throw new ApiError(401, "Please verify your email before logging in.");
     }
 
     //if user exist, then checking password is correct or not through isPasswordCorrect() method (user.model.js)
@@ -183,6 +334,7 @@ const loginUser = asyncHandler(async (req, res) => {
     //console.log("PWD: ", isPasswordValid);
     // password is incorrect then throw err
     if (!isPasswordValid) {
+        console.error("Invalid user credentials");
         throw new ApiError(401, "Invalid user credentials");
     }
 
@@ -309,10 +461,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
             );
     } catch (error) {
         console.error("Error in refreshAccessToken:", error);
-        throw new ApiError(
-            401,
-            error?.message || "Failed to refresh access token"
-        );
+        throw new ApiError(401, "Failed to refresh access token");
     }
 });
 
@@ -396,12 +545,12 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     console.log(
         `fullName: ${fullName}, username: ${username}, email: ${email}, phone: ${phone}, languages: ${languages}, travelPreference: ${travelPreference},address: ${address}`
     );
-    if (!fullName || !username || !email || !phone) {
-        throw new ApiError(
-            400,
-            "All field are required to update account details."
-        );
-    }
+    // if (!fullName || !username || !email || !phone) {
+    //     throw new ApiError(
+    //         400,
+    //         "All field are required to update account details."
+    //     );
+    // }
     const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
@@ -730,7 +879,7 @@ const getTripHistory = asyncHandler(async (req, res) => {
             new ApiResponse(
                 201,
                 user[0].tripHistory,
-                "Watch history fetched successfully bc"
+                "Trip history fetched successfully"
             )
         );
 });

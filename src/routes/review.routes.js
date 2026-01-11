@@ -8,8 +8,10 @@ import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-router.route("/post-review/:revieweeId").post(verifyJWT, createReview);
-router.route("/all-reviews/:revieweeId").get(getAllReviews); // get all reviews/comments
-router.route("/all-ratings/:revieweeId").get(getRatings); // get all ratings/stars
+router
+    .route("/user/:revieweeId")
+    .post(verifyJWT, createReview) // create review/comment
+    .get(getAllReviews); // get all reviews/comments
+router.route("/user/:revieweeId/ratings").get(getRatings); // get all ratings/stars
 
 export default router;

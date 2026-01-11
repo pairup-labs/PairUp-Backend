@@ -12,6 +12,7 @@ import {
     updateUserAvatar,
     updateUserCoverImage,
     findUserByUsername,
+    verifyEmail,
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
@@ -19,49 +20,43 @@ import { getAllReviews } from "../controllers/review.controller.js";
 
 const router = Router();
 
+// --- Base Route for Users ---
+// POST /api/v1/users
+
 router.route("/register").post(
     upload.fields([
         {
             name: "avatar",
             maxCount: 1,
         },
-        {
-            name: "coverImage",
-            maxCount: 1,
-        },
     ]),
     registerUser
-);
+); // localhost:8001/api/v1/users working fine
 
-router.route("/login").post(loginUser);
-
+router.route("/login").post(loginUser); // working fine
 //secured routes
-router.route("/logout").post(verifyJWT, logoutUser);
+router.route("/logout").post(verifyJWT, logoutUser); // working fine
+router.route("/verify-email/:token").get(verifyEmail); // working fine
+router.route("/refresh-token").post(refreshAccessToken); // localhost:8001/api/v1/users/refresh-token working fine
 
-router.route("/refresh-token").post(refreshAccessToken); // localhost:8001/api/v1/users/refresh-token
+// --- Logged-in User's Profile ("/me") ---
+// GET    /api/v1/users/me
+// PATCH  /api/v1/users/me
+router
+    .route("/me")
+    .get(verifyJWT, getCurrentUser) // working fine
+    .patch(verifyJWT, updateAccountDetails); // working fine
 
-router.route("/change-password").post(verifyJWT, changeCurrentPassword);
-
-router.route("/current-user").get(verifyJWT, getCurrentUser);
-
-router.route("/update-account").patch(verifyJWT, updateAccountDetails);
+router.route("/me/change-password").patch(verifyJWT, changeCurrentPassword); // working fine
 
 router
-    .route("/update-avatar")
-    .patch(verifyJWT, upload.single("avatar"), updateUserAvatar);
+    .route("/me/avatar")
+    .patch(verifyJWT, upload.single("avatar"), updateUserAvatar); // working fine
 
-router
-    .route("/update-coverImage")
-    .patch(verifyJWT, upload.single("coverImage"), updateUserCoverImage);
+router.route("/:username").get(findUserByUsername); // working fine
 
-router
-    .route("/channel-profile/:username")
-    .get(verifyJWT, getUserChannelProfile);
+router.route("/me/reviews").get(verifyJWT, getAllReviews); // working fine
 
-router.route("/find/find-user/:username").get(findUserByUsername);
-
-router.route("/all-reviews").get(verifyJWT, getAllReviews);
-
-router.route("/trip-history").get(verifyJWT, getTripHistory);
+router.route("/me/trips").get(verifyJWT, getTripHistory); // working fine
 
 export default router;

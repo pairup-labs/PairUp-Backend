@@ -102,14 +102,32 @@ const userSchema = new Schema(
         refreshToken: {
             type: String,
         },
-        accountVerified: {
+
+        loginType: {
+            type: String,
+            enum: ["EMAIL_PASSWORD", "GOOGLE"],
+            default: "EMAIL_PASSWORD",
+        },
+        googleId: {
+            type: String,
+        },
+        isVerified: {
             type: Boolean,
             default: false,
         },
-        verificationCode: Number,
-        verificationCodeExpiry: Date,
-        resetPasswordToken: String,
-        resetPasswordExpire: Date,
+        verificationToken: {
+            type: String,
+        },
+        verificationTokenExpiry: {
+            type: Date,
+        },
+
+        passwordResetToken: {
+            type: String,
+        },
+        passwordResetExpires: {
+            type: Date,
+        },
     },
     {
         timestamps: true,
@@ -133,7 +151,7 @@ userSchema.methods.generateAccessToken = function () {
             _id: this._id,
             username: this.username,
             email: this.email,
-            fullname: this.fullname,
+            fullname: this.fullName,
         },
         process.env.ACCESS_TOKEN_SECRET,
         {
@@ -153,5 +171,8 @@ userSchema.methods.generateRefreshToken = function () {
         }
     );
 };
+
+userSchema.index({ verificationToken: 1 });
+userSchema.index({ passwordResetToken: 1 });
 
 export const User = mongoose.model("User", userSchema);

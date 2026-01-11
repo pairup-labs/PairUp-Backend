@@ -101,93 +101,96 @@ const postTrip = asyncHandler(async (req, res) => {
     }
 });
 
-// ✅ Get all trips
-// const getAllTrip = asyncHandler(async (req, res) => {
-//     try {
-//         const trip = await Trip.find(req.trip)
-//             .populate("organizer", "fullName username email avatar")
-//             .populate("participants", "fullName username email avatar");
-
-//         //console.log("All trips: ", trip);
-//         if (!trip) {
-//             console.error("Error in getTrip:", error);
-//             throw new ApiError(404, "Trips not found");
-//         }
-
-//         return res
-//             .status(200)
-//             .json(new ApiResponse(201, trip, "Trips fetched successfully"));
-//     } catch (error) {
-//         console.error("Error in getTrip:", error);
-//         throw new ApiError(501, "Something went wrong while fetching trips");
-//     }
-// });
-
+//✅ Get all trips
 const getAllTrip = asyncHandler(async (req, res) => {
     try {
-        // Expect the user's latitude and longitude in the query parameters
-        const { lat, lng, maxDistance } = req.query;
+        const trip = await Trip.find(req.trip)
+            .populate("organizer", "fullName username email avatar")
+            .populate("participants", "fullName username email avatar");
 
-        console.log(
-            `lat: ${lat} lng: ${lng} maxDistance: ${maxDistance} req.query: ${req.query}`
-        );
-
-        if (!lat || !lng) {
-            throw new ApiError(400, "Latitude and Longitude are required");
-        }
-
-        // Use the $geoNear aggregation stage to find trips ordered by distance
-        const trips = await Trip.aggregate([
-            {
-                $geoNear: {
-                    near: {
-                        type: "Point",
-                        coordinates: [parseFloat(lng), parseFloat(lat)],
-                    },
-                    distanceField: "distance", // The computed distance will be stored here (in meters)
-                    maxDistance: maxDistance ? parseInt(maxDistance) : 10000, // Optional maximum distance in meters (default: 10 km)
-                    spherical: true,
-                },
-            },
-            // Lookup organizer details
-            {
-                $lookup: {
-                    from: "users",
-                    localField: "organizer",
-                    foreignField: "_id",
-                    as: "organizer",
-                },
-            },
-            { $unwind: "$organizer" },
-            // Lookup participants details
-            {
-                $lookup: {
-                    from: "users",
-                    localField: "participants",
-                    foreignField: "_id",
-                    as: "participants",
-                },
-            },
-            // Sort by distance ascending (nearest first)
-            {
-                $sort: { distance: 1 },
-            },
-        ]);
-
-        if (!trips || trips.length === 0) {
+        //console.log("All trips: ", trip);
+        if (!trip) {
+            console.error("Error in getTrip:", error);
             throw new ApiError(404, "Trips not found");
         }
 
         return res
             .status(200)
-            .json(new ApiResponse(201, trips, "Trips fetched successfully"));
+            .json(new ApiResponse(201, trip, "Trips fetched successfully"));
     } catch (error) {
         console.error("Error in getTrip:", error);
         throw new ApiError(501, "Something went wrong while fetching trips");
     }
 });
 
-// ✅ Get view trips details
+// const getAllTrip = asyncHandler(async (req, res) => {
+//     //Expire trip whose startDate is in past.
+//     await Trip.updateMany(
+//         { startDate: { $lt: new Date(), expired: false } },
+//         { $set: { expired: true } }
+//     )
+//     // Expect the user's latitude and longitude in the query parameters
+//     const { lat, lng, maxDistance } = req.query;
+
+//     console.log(
+//         `lat: ${lat} lng: ${lng} maxDistance: ${maxDistance} req.query: ${req.query}`
+//     );
+
+//     if (!lat || !lng) {
+//         throw new ApiError(400, "Latitude and Longitude are required");
+//     }
+
+//     // Use the $geoNear aggregation stage to find trips ordered by distance
+//     const trips = await Trip.aggregate([
+//         { $match: { expired: false }, },
+//         {
+//             $geoNear: {
+//                 near: {
+//                     type: "Point",
+//                     coordinates: [parseFloat(lng), parseFloat(lat)],
+//                 },
+//                 distanceField: "distance", // The computed distance will be stored here (in meters)
+//                 maxDistance: maxDistance ? parseInt(maxDistance) : 10000, // Optional maximum distance in meters (default: 10 km)
+//                 spherical: true,
+//             },
+//         },
+//         // Lookup organizer details
+//         {
+//             $lookup: {
+//                 from: "users",
+//                 localField: "organizer",
+//                 foreignField: "_id",
+//                 as: "organizer",
+//             },
+//         },
+//         { $unwind: "$organizer" },
+//         // Lookup participants details
+//         {
+//             $lookup: {
+//                 from: "users",
+//                 localField: "participants",
+//                 foreignField: "_id",
+//                 as: "participants",
+//             },
+//         },
+//         // Sort by distance ascending (nearest first)
+//         {
+//             $sort: { distance: 1 },
+//         },
+//     ]);
+//     console.log("No. of trips: ", trips.length);
+//     if (!trips || trips.length === 0) {
+//         throw new ApiError(404, "Trips not found");
+//     }
+
+//     console.log("All trips: ", trips);
+
+//     return res
+//         .status(200)
+//         .json(new ApiResponse(201, trips, "Trips fetched successfully"));
+// });
+
+// Get view trips details
 const viewTripDetails = asyncHandler(async (req, res) => {
     try {
         const { tripId } = req.params;
@@ -318,6 +321,10 @@ const joinTrip = asyncHandler(async (req, res) => {
         console.log(`
         tripId: ${tripId}
         userId: ${userId} for joining trip`);
+
+        if (!tripId || !userId) {
+            throw new ApiError(400, "Trip ID and User ID are required");
+        }
 
         const trip = await Trip.findById(tripId);
         if (!trip) {
@@ -482,7 +489,7 @@ const getNearbyTrips = asyncHandler(async (req, res) => {
                 },
             },
             {
-                // 📌 Sort by (1) Highest Rating of organizer → (2) Most Participants → (3) Nearest Distance
+                // Sort by (1) Highest Rating of organizer → (2) Most Participants → (3) Nearest Distance
                 $sort: {
                     /* organizerAverageRating: -1, */
                     distance: 1,
@@ -490,7 +497,7 @@ const getNearbyTrips = asyncHandler(async (req, res) => {
                 },
             },
             {
-                // 📌 Remove unnecessary fields and keep only required fields for trip cards
+                // Remove unnecessary fields and keep only required fields for trip cards
                 $project: {
                     _id: 1,
                     destination: 1,
@@ -500,6 +507,7 @@ const getNearbyTrips = asyncHandler(async (req, res) => {
                         type: "Point",
                         coordinates: ["$location.coordinates"],
                     },
+                    categories: 1,
                     participantCount: 1, // Number of participants
                     startDate: 1, // Start date of trip
                     endDate: 1, // End date of trip

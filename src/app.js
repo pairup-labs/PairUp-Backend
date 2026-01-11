@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import passport from "passport";
+import "./config/passport-setup.js";
 
 const app = express();
 
@@ -21,11 +23,14 @@ app.use(
 app.use(express.urlencoded({ extended: true, limit: "500kb" })); //when fetching data from url
 app.use(express.static("public"));
 app.use(cookieParser());
+app.use(passport.initialize());
 
 // routes import
 import userRouter from "./routes/user.routes.js";
 import tripRouter from "./routes/trip.routes.js";
+import eventRouter from "./routes/event.routes.js";
 import reviewRouter from "./routes/review.routes.js";
+
 import { errorMiddleware } from "./utils/ApiError.js";
 
 // routes declaration
@@ -33,8 +38,9 @@ app.get("/", (req, res) => {
     res.send("Hello World!");
 });
 app.use("/api/v1/users", userRouter);
-app.use("/api/v1/users/trips", tripRouter);
-app.use("/api/v1/users", reviewRouter);
+app.use("/api/v1/trips", tripRouter);
+app.use("/api/v1/events", eventRouter);
+app.use("/api/v1/reviews", reviewRouter);
 
 //this middleware should be end.
 app.use(errorMiddleware);
