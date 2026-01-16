@@ -48,38 +48,6 @@ const generateAccessTokenAndRefreshToken = async (userId) => {
 };
 
 // verify email using otp
-// export const verifyEmail = asyncHandler(async (req, res) => {
-//     const { email, otp } = req.body;
-
-//     if (!email || !otp) {
-//         throw new ApiError(400, "Email and OTP are required.");
-//     }
-
-//     const user = await User.findOne({
-//         email,
-//         verificationToken: otp,
-//         verificationTokenExpiry: { $gt: Date.now() },
-//     });
-
-//     if (!user) {
-//         throw new ApiError(400, "Invalid or expired OTP.");
-//     }
-
-//     user.isVerified = true;
-//     user.verificationToken = undefined;
-//     user.verificationTokenExpiry = undefined;
-//     await user.save({ validateBeforeSave: false });
-
-//     return res
-//         .status(200)
-//         .json(
-//             new ApiResponse(
-//                 200,
-//                 {},
-//                 "Email verified successfully. You can now log in."
-//             )
-//         );
-// });
 
 // verify email using token
 export const verifyEmail = asyncHandler(async (req, res) => {
@@ -194,16 +162,10 @@ const registerUser = asyncHandler(async (req, res) => {
         avatarLocalPath = req.files.avatar[0].path;
     }
 
-    // if (!avatarLocalPath) {
-    //     throw new ApiError(401, "Avatar is required to upload on LocalPath");
-    // }
-
-    //upload image to cloudinary, get image url
-    const avatar = await uploadOnCloudinary(avatarLocalPath);
-
-    // if (!avatar) {
-    //     throw new ApiError(401, "Avatar is required to upload on cloudinary");
-    // }
+    let avatar;
+    if (avatarLocalPath) {
+        avatar = await uploadOnCloudinary(avatarLocalPath);
+    }
 
     // otp generation
     // Generate a unique verification token instead of an OTP
@@ -243,13 +205,6 @@ const registerUser = asyncHandler(async (req, res) => {
 
     try {
         console.log("sending verification email");
-        // await sendEmail({
-        //     fromAddress: "noreply@pairup.online", // Specify the sender
-        //     fromName: "PairUp Verification", // Specify the sender's name
-        //     email: user.email,
-        //     subject: "Verify Your Email Address",
-        //     html: `<p>Your verification code is: <strong>${otp}</strong>. It will expire in 10 minutes.</p>`,
-        // });
 
         const verificationUrl = `${process.env.CORS_ORIGIN}/verify-email/${verificationToken}`;
 
@@ -545,12 +500,6 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     console.log(
         `fullName: ${fullName}, username: ${username}, email: ${email}, phone: ${phone}, languages: ${languages}, travelPreference: ${travelPreference},address: ${address}`
     );
-    // if (!fullName || !username || !email || !phone) {
-    //     throw new ApiError(
-    //         400,
-    //         "All field are required to update account details."
-    //     );
-    // }
     const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
@@ -737,59 +686,6 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         );
 });
 
-// const getTripHistory = asyncHandler(async (req, res) => {
-//     const user = await User.aggregate([
-//         {
-//             $match: {
-//                 _id: new mongoose.Types.ObjectId(req.user._id),
-//             },
-//         },
-//         {
-//             $lookup: {
-//                 from: "trips",
-//                 localField: "_id",
-//                 foreignField: "organizer",
-//                 as: "tripHistory",
-//                 pipeline: [
-//                     {
-//                         $lookup: {
-//                             from: "users",
-//                             localField: "organizer",
-//                             foreignField: "_id",
-//                             as: "organizer",
-//                             pipeline: [
-//                                 {
-//                                     $project: {
-//                                         fullName: 1,
-//                                         username: 1,
-//                                         avatar: 1,
-//                                     },
-//                                 },
-//                             ],
-//                         },
-//                     },
-//                     {
-//                         $addFields: {
-//                             organizer: {
-//                                 $first: "$organizer",
-//                             },
-//                         },
-//                     },
-//                 ],
-//             },
-//         },
-//     ]);
-
-//     return res
-//         .status(200)
-//         .json(
-//             new ApiResponse(
-//                 201,
-//                 user[0].tripHistory,
-//                 "Watch history fetched successfully bc"
-//             )
-//         );
-// });
 
 const getTripHistory = asyncHandler(async (req, res) => {
     const user = await User.aggregate([
