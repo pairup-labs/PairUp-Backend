@@ -505,14 +505,14 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 
 const findUserByUsername = async (req, res) => {
     try {
-        const { username } = req?.params;
+        const { username } = req.params;
         console.log("username: ", username);
 
         if (!username) {
             throw new ApiError(400, "Username is required");
         }
 
-        const user = await User?.findOne({ username }).select(
+        const user = await User.findOne({ username }).select(
             "-password -refreshToken"
         );
 
@@ -849,8 +849,6 @@ const getTripHistory = asyncHandler(async (req, res) => {
                             },
                         },
                     },
-                ],
-                pipeline: [
                     {
                         $lookup: {
                             from: "users",

@@ -87,7 +87,7 @@ const postTrip = asyncHandler(async (req, res) => {
 
         //console.log("posted trip sucessfully: ", trip);
         if (!trip) {
-            console.error("Error in postTrip:", error);
+            console.error("Error in postTrip: Trip creation failed");
             fs.unlinkSync(coverImageLocalPath);
             throw new ApiError(500, "Something went wrong while posting trip");
         }
@@ -110,7 +110,7 @@ const getAllTrip = asyncHandler(async (req, res) => {
 
         //console.log("All trips: ", trip);
         if (!trip) {
-            console.error("Error in getTrip:", error);
+            console.error("Error in getTrip: Trip not found");
             throw new ApiError(404, "Trips not found");
         }
 

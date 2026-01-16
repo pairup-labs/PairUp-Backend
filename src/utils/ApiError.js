@@ -27,19 +27,19 @@ export const errorMiddleware = (err, req, res, next) => {
 
     if (err.name === "CastError") {
         const message = `Invalid ${err.path}`;
-        err = new ApiError(message, 400);
+        err = new ApiError(400, message);
     }
     if (err.message === "JsonWebTokenError") {
         const message = `JSON Web Token is invalid, Try again`;
-        err = new ApiError(message, 400);
+        err = new ApiError(400, message);
     }
     if (err.message === "TokenExpiredError") {
         const message = `JSON Web Token is expired, Try again`;
-        err = new ApiError(message, 400);
+        err = new ApiError(400, message);
     }
     if (err.code === 11000) {
-        const message = `Duplicate ${Object.keys(error.keysValue)} Entered`;
-        err = new ApiError(message, 400);
+        const message = `Duplicate ${Object.keys(err.keyValue)} Entered`;
+        err = new ApiError(400, message);
     }
 
     return res.status(err.statusCode).json({
