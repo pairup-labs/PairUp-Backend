@@ -22,29 +22,36 @@ class ApiError extends Error {
 }
 
 export const errorMiddleware = (err, req, res, next) => {
-    err.statusCode = err.statusCode || 500;
-    err.message = err.message || "Internal sever error.";
+    const statusCode = err.statusCode || 500;
+    let message = err.message || "Internal server error.";
 
+    // Handle invalid Mongo ObjectId
     if (err.name === "CastError") {
-        const message = `Invalid ${err.path}`;
-        err = new ApiError(400, message);
-    }
-    if (err.message === "JsonWebTokenError") {
-        const message = `JSON Web Token is invalid, Try again`;
-        err = new ApiError(400, message);
-    }
-    if (err.message === "TokenExpiredError") {
-        const message = `JSON Web Token is expired, Try again`;
-        err = new ApiError(400, message);
-    }
-    if (err.code === 11000) {
-        const message = `Duplicate ${Object.keys(err.keyValue)} Entered`;
+        message = `Invalid ${err.path}`;
         err = new ApiError(400, message);
     }
 
-    return res.status(err.statusCode).json({
+    // Duplicate field error 11000
+    if (err.code === 11000) {
+        message = `Duplicate ${Object.keys(err.keyValue)} entered`;
+        err = new ApiError(400, message);
+    }
+
+    // JWT errors
+    if (err.name === "JsonWebTokenError") {
+        err = new ApiError(400, "Invalid JSON Web Token");
+    }
+
+    if (err.name === "TokenExpiredError") {
+        err = new ApiError(400, "JSON Web Token expired");
+    }
+
+    return res.status(statusCode).json({
+        statusCode,
         success: false,
         message: err.message,
+        errors: err.errors || [],
+        stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
     });
 };
 

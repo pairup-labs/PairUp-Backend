@@ -27,7 +27,7 @@ app.use(passport.initialize());
 
 // routes import
 import userRouter from "./routes/user.routes.js";
-import tripRouter from "./routes/trip.routes.js";
+import tripRouter from "./trips/routes/trip.routes.js";
 import eventRouter from "./routes/event.routes.js";
 import reviewRouter from "./routes/review.routes.js";
 

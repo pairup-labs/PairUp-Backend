@@ -355,7 +355,7 @@ const logoutUser = asyncHandler(async (req, res) => {
             new ApiResponse(
                 200,
 
-                req.user.fullName, //{},
+                req.user.fullName,
                 "User logged Out Successfully"
             )
         );
@@ -685,7 +685,6 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
             )
         );
 });
-
 
 const getTripHistory = asyncHandler(async (req, res) => {
     const user = await User.aggregate([
