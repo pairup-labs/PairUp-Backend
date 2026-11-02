@@ -4,6 +4,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import passport from "passport";
 import "./config/passport-setup.js";
+import { track } from "@vercel/analytics/server";
 
 const app = express();
 
@@ -49,6 +50,33 @@ app.use(express.urlencoded({ extended: true, limit: "500kb" }));
 app.use(express.static("public"));
 app.use(cookieParser());
 app.use(passport.initialize());
+
+// Vercel Analytics middleware for tracking API requests
+app.use((req, res, next) => {
+    // Track API requests asynchronously without blocking the response
+    const startTime = Date.now();
+    
+    res.on("finish", () => {
+        const duration = Date.now() - startTime;
+        
+        // Only track API routes, not static files or health checks
+        if (req.path.startsWith("/api/")) {
+            track("api_request", {
+                method: req.method,
+                path: req.path,
+                status: res.statusCode,
+                duration,
+            }, {
+                headers: req.headers,
+            }).catch((error) => {
+                // Log error but don't affect the request
+                console.error("Analytics tracking error:", error);
+            });
+        }
+    });
+    
+    next();
+});
 
 // routes import
 import userRouter from "./routes/user.routes.js";
