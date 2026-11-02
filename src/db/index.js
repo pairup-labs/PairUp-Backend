@@ -3,17 +3,27 @@ import mongoose from "mongoose";
 import { DB_NAME } from "../constants.js";
 
 const connectDB = async () => {
-    mongoose.set("debug", true);
+    mongoose.set("debug", process.env.NODE_ENV !== "PRODUCTION");
     try {
-        const connectionInstance = await mongoose.connect(
-            `${process.env.URI}/${DB_NAME}`
-        );
+        let mongoUri = process.env.URI || "";
+        if (mongoUri && DB_NAME && !mongoUri.includes(`/${DB_NAME}`)) {
+            if (mongoUri.includes("?")) {
+                mongoUri = mongoUri.replace("?", `/${DB_NAME}?`);
+            } else {
+                mongoUri = `${mongoUri}/${DB_NAME}`;
+            }
+        }
+        const connectionInstance = await mongoose.connect(mongoUri);
         console.log(
             `\nMongoDB is connected !! DB Host: ${connectionInstance.connection.host}`
         );
+        return connectionInstance;
     } catch (error) {
-        console.error("Hi Faisal, Its mongodb connection Error: ", error);
-        process.exit(1); //Exit process with failure and 1 means failure, 0 means success. it should on use in development mode. for production mode use process.on('SIGTERM)
+        console.error("MongoDB connection Error: ", error);
+        if (process.env.NODE_ENV !== "PRODUCTION" && !process.env.VERCEL) {
+            process.exit(1);
+        }
+        throw error;
     }
 };
 

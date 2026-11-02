@@ -12,3 +12,5 @@ connectDB()
     .catch((error) => {
         console.log("Error in connecting to DB: ", error);
     });
+
+export default app;
