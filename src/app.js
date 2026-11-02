@@ -4,6 +4,14 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import passport from "passport";
 import "./config/passport-setup.js";
+import connectDB from "./db/index.js";
+
+// routes import
+import userRouter from "./routes/user.routes.js";
+import tripRouter from "./trips/routes/trip.routes.js";
+import eventRouter from "./routes/event.routes.js";
+import reviewRouter from "./routes/review.routes.js";
+import { errorMiddleware } from "./utils/ApiError.js";
 
 const app = express();
 
@@ -50,13 +58,20 @@ app.use(express.static("public"));
 app.use(cookieParser());
 app.use(passport.initialize());
 
-// routes import
-import userRouter from "./routes/user.routes.js";
-import tripRouter from "./trips/routes/trip.routes.js";
-import eventRouter from "./routes/event.routes.js";
-import reviewRouter from "./routes/review.routes.js";
-
-import { errorMiddleware } from "./utils/ApiError.js";
+// Ensure MongoDB is connected before handling requests (vital for Vercel Zero Config serverless invocations)
+app.use(async (req, res, next) => {
+    try {
+        await connectDB();
+        next();
+    } catch (error) {
+        console.error("Database connection failed in serverless request:", error);
+        return res.status(500).json({
+            statusCode: 500,
+            success: false,
+            message: "Database connection failed",
+        });
+    }
+});
 
 // routes declaration
 app.get("/", (req, res) => {
@@ -75,4 +90,5 @@ app.use("/api/v1/reviews", reviewRouter);
 // Error middleware should be at the end
 app.use(errorMiddleware);
 
+export default app;
 export { app };
