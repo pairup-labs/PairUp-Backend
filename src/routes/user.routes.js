@@ -2,7 +2,6 @@ import { Router } from "express";
 import {
     changeCurrentPassword,
     getCurrentUser,
-    getUserChannelProfile,
     getTripHistory,
     loginUser,
     logoutUser,
@@ -10,7 +9,6 @@ import {
     registerUser,
     updateAccountDetails,
     updateUserAvatar,
-    updateUserCoverImage,
     findUserByUsername,
     verifyEmail,
 } from "../controllers/user.controller.js";

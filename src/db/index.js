@@ -3,24 +3,26 @@ import mongoose from "mongoose";
 import { DB_NAME } from "../constants.js";
 
 const connectDB = async () => {
-    mongoose.set("debug", process.env.NODE_ENV !== "PRODUCTION");
+    if (mongoose.connection.readyState >= 1) {
+        return mongoose.connection;
+    }
+
+    if (process.env.NODE_ENV !== "PRODUCTION") {
+        mongoose.set("debug", true);
+    }
+
     try {
-        let mongoUri = process.env.URI || "";
-        if (mongoUri && DB_NAME && !mongoUri.includes(`/${DB_NAME}`)) {
-            if (mongoUri.includes("?")) {
-                mongoUri = mongoUri.replace("?", `/${DB_NAME}?`);
-            } else {
-                mongoUri = `${mongoUri}/${DB_NAME}`;
-            }
-        }
-        const connectionInstance = await mongoose.connect(mongoUri);
+        const connectionInstance = await mongoose.connect(process.env.URI, {
+            dbName: DB_NAME,
+        });
+
         console.log(
-            `\nMongoDB is connected !! DB Host: ${connectionInstance.connection.host}`
+            `\nMongoDB connected successfully !! DB Host: ${connectionInstance.connection.host}`
         );
         return connectionInstance;
     } catch (error) {
         console.error("MongoDB connection Error: ", error);
-        if (process.env.NODE_ENV !== "PRODUCTION" && !process.env.VERCEL) {
+        if (process.env.NODE_ENV !== "PRODUCTION") {
             process.exit(1);
         }
         throw error;

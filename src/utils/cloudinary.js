@@ -28,7 +28,7 @@ const uploadOnCloudinary = async (localFilePath) => {
         //console.log(`Files is uploaded successfully: ${uploadResult.url}`);
         fs.unlinkSync(localFilePath); //Delete the locally saved file if it successfully uploaded
         return uploadResult;
-    } catch (error) {
+    } catch {
         fs.unlinkSync(localFilePath); // Delete the locally saved file if it fails to upload
         return null;
     }
@@ -54,7 +54,7 @@ const tripUploadOnCloudinary = async (localFilePath) => {
         //console.log(`Files is uploaded successfully: ${uploadResult.url}`);
         fs.unlinkSync(localFilePath); //Delete the locally saved file if it successfully uploaded
         return uploadResult;
-    } catch (error) {
+    } catch {
         fs.unlinkSync(localFilePath); // Delete the locally saved file if it fails to upload
         return null;
     }

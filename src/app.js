@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -26,10 +27,10 @@ app.use(
             if (isAllowed) {
                 return callback(null, true);
             }
-            return callback(null, true); // Fallback allow to prevent harsh browser blocks
+            return callback(null, true); // Fallback allow to avoid unexpected browser CORS blocks
         },
         credentials: true,
-        methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        methods: ["GET", "POST", "PATCH", "DELETE", "PUT", "OPTIONS"],
         allowedHeaders: [
             "Content-Type",
             "Authorization",
@@ -44,7 +45,7 @@ app.use(
         limit: "500kb",
     })
 );
-app.use(express.urlencoded({ extended: true, limit: "500kb" })); //when fetching data from url
+app.use(express.urlencoded({ extended: true, limit: "500kb" }));
 app.use(express.static("public"));
 app.use(cookieParser());
 app.use(passport.initialize());
@@ -59,13 +60,19 @@ import { errorMiddleware } from "./utils/ApiError.js";
 
 // routes declaration
 app.get("/", (req, res) => {
-    res.send("Hello World!");
+    res.status(200).json({
+        statusCode: 200,
+        success: true,
+        message: "PairUp API is running successfully!",
+    });
 });
+
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/trips", tripRouter);
 app.use("/api/v1/events", eventRouter);
 app.use("/api/v1/reviews", reviewRouter);
 
-//this middleware should be end.
+// Error middleware should be at the end
 app.use(errorMiddleware);
+
 export { app };
